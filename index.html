@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+  <meta charset="UTF-8" />
+  <title>Excel - Markdown - HTML Converter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen p-6 font-sans relative">
+  <div class="w-full max-w-8xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-4xl font-bold text-center flex-1">Table Converter: Excel, Markdown, HTML, CSV, JSON</h1>
+      <button id="themeToggle" onclick="toggleDarkMode()" class="ml-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2 rounded shadow text-xl">
+        <i id="themeIcon" class="fas fa-moon"></i>
+      </button>
+    </div>
+
+    <p class="text-lg mb-4 text-center">Paste a table in Excel, Markdown, or HTML format. Automatically detects input and lets you copy to any format like Markdown, Excel, CSV, JSON or HTML!</p>
+
+    <textarea id="inputArea" placeholder="Paste Excel cells, Markdown table, or HTML table here..."
+      class="w-full p-4 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 h-56 resize-y text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"></textarea>
+
+    <div class="flex flex-wrap gap-3 mb-6 justify-center">
+      <button onclick="copyMarkdown();renderToHTML()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
+        <i class="fas fa-code"></i> Copy Markdown
+      </button>
+      <button onclick="copyExcel();renderToHTML()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
+        <i class="fas fa-table-cells"></i> Copy Excel
+      </button>
+      <button onclick="copyHTML();renderToHTML()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
+        <i class="fas fa-code"></i> Copy HTML
+      </button>
+      <button onclick="copyCSV();renderToHTML()" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
+        <i class="fas fa-file-csv"></i> Copy CSV
+      </button>
+      <button onclick="copyJSON();renderToHTML()" class="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded shadow flex items-center gap-2">
+        <i class="fas fa-code-branch"></i> Copy JSON
+      </button>
+      <button onclick="renderToHTML()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
+        <i class="fas fa-eye"></i> Preview
+      </button>
+    </div>
+
+    <div>
+      <h2 class="text-2xl font-semibold mb-3">Table Preview</h2>
+      <div id="outputArea" class="overflow-auto border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm min-h-[80px] text-sm"></div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 space-y-2 z-50"></div>
+
+  <!-- Toast animation -->
+  <style>
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fade-in 0.3s ease-out;
+    }
+  </style>
+  <script src="main.js"></script>
+</body>
+</html>
