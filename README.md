@@ -1,14 +1,12 @@
-# Excel to Markdown tool
-Convert Excel cells to Markdown tables and vice versa, with HTML rendering support! Fully private in your browser - no data sent anywhere. 
+# Multi Table Converter: Excel, Markdown, HTML, CSV, JSON
 
-Supports: 
-- Excel
-- Markdown
-- HTML
-- CSV
-- JSON
+Paste a table in Excel, Markdown, HTML, CSV or JSON format. Automatically detects the input format and lets you copy to any format like Markdown, Excel, CSV, JSON or HTML! 
 
-<img width="1840" alt="image" src="https://github.com/user-attachments/assets/453851ac-7dd0-40c1-ac04-84c452ec21ec" />
+Watch the short tutorial here:
+[![image](https://github.com/user-attachments/assets/f663b9f7-af31-4254-8c79-d15fe67fad29)
+](https://www.youtube.com/watch?v=0MUIUlGw2SI)
+
+
 
 
 
