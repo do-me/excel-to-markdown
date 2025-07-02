@@ -31,7 +31,8 @@ function parseInput() {
     let rows = lines.map(line =>
       line.trim().replace(/^(\||\s*)|(\|\s*)$/g, '').split('|').map(cell => cell.trim())
     );
-    rows = rows.filter(row => !row.every(cell => /^-+$/.test(cell)));
+    // Updated regex to match separator rows with colons (like :--- or ---:)
+    rows = rows.filter(row => !row.every(cell => /^:?-+:?$/.test(cell)));
     return { type: 'markdown', rows };
   }
   return { type: 'unknown', rows: [] };
