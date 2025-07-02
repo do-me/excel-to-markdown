@@ -16,25 +16,124 @@ function showToast(message, type = 'success') {
 function parseInput() {
   const input = document.getElementById('inputArea').value.trim();
 
-  if (input.includes('<table')) {
+  // Try JSON first
+  if (input.startsWith('[') || input.startsWith('{')) {
+    try {
+      const data = JSON.parse(input);
+      if (Array.isArray(data) && data.length > 0) {
+        if (typeof data[0] === 'object' && data[0] !== null) {
+          // Array of objects - convert to table
+          const keys = Object.keys(data[0]);
+          const rows = [keys, ...data.map(obj => keys.map(key => obj[key] || ''))];
+          return { type: 'json', rows };
+        }
+      }
+    } catch (e) {
+      // Not valid JSON, continue with other parsers
+    }
+  }
+
+  // Check for HTML table
+  if (input.includes('<table') || input.includes('<tr') || input.includes('<td') || input.includes('<th')) {
     const container = document.createElement('div');
     container.innerHTML = input;
     const rows = Array.from(container.querySelectorAll('tr')).map(tr =>
       Array.from(tr.querySelectorAll('th, td')).map(cell => cell.textContent.trim())
     );
-    return { type: 'html', rows };
-  } else if (input.includes('\t')) {
-    const rows = input.split('\n').map(row => row.split('\t'));
-    return { type: 'excel', rows };
-  } else if (input.includes('|')) {
-    const lines = input.split('\n').filter(line => line.trim().startsWith('|'));
-    let rows = lines.map(line =>
-      line.trim().replace(/^(\||\s*)|(\|\s*)$/g, '').split('|').map(cell => cell.trim())
-    );
-    // Updated regex to match separator rows with colons (like :--- or ---:)
-    rows = rows.filter(row => !row.every(cell => /^:?-+:?$/.test(cell)));
-    return { type: 'markdown', rows };
+    if (rows.length > 0) {
+      return { type: 'html', rows };
+    }
   }
+
+  // Check for tab-separated (Excel paste)
+  if (input.includes('\t')) {
+    const rows = input.split('\n').filter(line => line.trim()).map(row => row.split('\t'));
+    return { type: 'excel', rows };
+  }
+
+  // Check for markdown table
+  if (input.includes('|')) {
+    const lines = input.split('\n').filter(line => line.trim().startsWith('|'));
+    if (lines.length > 0) {
+      let rows = lines.map(line =>
+        line.trim().replace(/^(\||\s*)|(\|\s*)$/g, '').split('|').map(cell => cell.trim())
+      );
+      // Updated regex to match separator rows with colons (like :--- or ---:)
+      rows = rows.filter(row => !row.every(cell => /^:?-+:?$/.test(cell)));
+      return { type: 'markdown', rows };
+    }
+  }
+
+  // Auto-detect CSV with different separators
+  const csvResult = parseCSV(input);
+  if (csvResult.rows.length > 0) {
+    return csvResult;
+  }
+
+  return { type: 'unknown', rows: [] };
+}
+
+function parseCSV(input) {
+  const lines = input.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return { type: 'unknown', rows: [] };
+
+  // Test different separators
+  const separators = [',', ';', '|', '\t'];
+  let bestSeparator = ',';
+  let maxColumns = 0;
+
+  for (const sep of separators) {
+    const testRow = lines[0].split(sep);
+    if (testRow.length > maxColumns) {
+      maxColumns = testRow.length;
+      bestSeparator = sep;
+    }
+  }
+
+  // Parse with the best separator
+  const rows = lines.map(line => {
+    // Simple CSV parsing - handles quoted fields
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < line.length) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          // Escaped quote
+          current += '"';
+          i += 2;
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+          i++;
+        }
+      } else if (char === bestSeparator && !inQuotes) {
+        // Field separator
+        result.push(current.trim());
+        current = '';
+        i++;
+      } else {
+        current += char;
+        i++;
+      }
+    }
+    
+    result.push(current.trim());
+    return result.map(cell => cell.replace(/^"(.*)"$/, '$1')); // Remove outer quotes
+  });
+
+  // Validate that we have consistent columns
+  const columnCounts = rows.map(row => row.length);
+  const avgColumns = columnCounts.reduce((a, b) => a + b, 0) / columnCounts.length;
+  
+  if (avgColumns >= 2 && rows.length > 0) {
+    return { type: 'csv', rows, separator: bestSeparator };
+  }
+
   return { type: 'unknown', rows: [] };
 }
 
@@ -104,7 +203,7 @@ function copyJSON() {
 }
 
 function renderToHTML() {
-  const { type, rows } = parseInput();
+  const { type, rows, separator } = parseInput();
   const output = document.getElementById('outputArea');
 
   if (!rows.length) {
@@ -113,7 +212,8 @@ function renderToHTML() {
   }
 
   output.innerHTML = generateTableHTML(rows);
-  showToast(`✅ Rendered ${type.toUpperCase()} table to HTML!`);
+  const typeDisplay = type === 'csv' ? `CSV (${separator})` : type.toUpperCase();
+  showToast(`✅ Rendered ${typeDisplay} table to HTML!`);
 }
 
 function generateTableHTML(rows) {
