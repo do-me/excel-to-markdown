@@ -243,6 +243,96 @@ function updateThemeIcon() {
   icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
 }
 
+function setupFileUpload() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  // Trigger file input click when clicking on the drop zone
+  dropZone.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  // Handle file selection from dialog
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleFile(e.target.files[0]);
+    }
+  });
+
+  // Drag and drop events
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Highlight drop zone on drag over
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
+    }, false);
+  });
+
+  // Remove highlight on drag leave or drop
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
+    }, false);
+  });
+
+  // Handle dropped file
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length) {
+      handleFile(files[0]);
+    }
+  });
+
+  function handleFile(file) {
+    const isExcel = file.name.match(/\.(xlsx|xls)$/i);
+
+    if (isExcel) {
+      // Handle Binary Excel File
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          
+          // Get first sheet
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          
+          // Convert to CSV
+          const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+          
+          document.getElementById('inputArea').value = csvOutput;
+          showToast(`✅ Loaded Excel file: ${file.name}`);
+          renderToHTML();
+        } catch (err) {
+          console.error(err);
+          showToast('❌ Error parsing Excel file', 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Handle Text File (CSV, JSON, MD, HTML)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('inputArea').value = e.target.result;
+        showToast(`✅ Loaded text file: ${file.name}`);
+        renderToHTML();
+      };
+      reader.onerror = () => showToast('❌ Error reading file', 'error');
+      reader.readAsText(file);
+    }
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('theme');
   const html = document.documentElement;
@@ -256,4 +346,5 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   updateThemeIcon();
+  setupFileUpload(); // Initialize Drag & Drop
 });
