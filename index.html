@@ -44,23 +44,61 @@
     <textarea id="inputArea" placeholder="...or paste Excel cells, Markdown table, or HTML table code here manually."
       class="w-full p-4 border border-gray-300 dark:border-gray-700 rounded-b-lg rounded-tr-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 h-56 resize-y text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 relative z-0"></textarea>
 
-    <div class="flex flex-wrap gap-3 mb-6 justify-center">
-      <button onclick="copyMarkdown();renderToHTML()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
-        <i class="fas fa-code"></i> Copy Markdown
-      </button>
-      <button onclick="copyExcel();renderToHTML()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
-        <i class="fas fa-table-cells"></i> Copy Excel
-      </button>
-      <button onclick="copyHTML();renderToHTML()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
-        <i class="fas fa-code"></i> Copy HTML
-      </button>
-      <button onclick="copyCSV();renderToHTML()" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
-        <i class="fas fa-file-csv"></i> Copy CSV
-      </button>
-      <button onclick="copyJSON();renderToHTML()" class="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded shadow flex items-center gap-2">
-        <i class="fas fa-code-branch"></i> Copy JSON
-      </button>
-      <button onclick="renderToHTML()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded shadow flex items-center gap-2">
+    <!-- Action Buttons Row -->
+    <div class="flex flex-wrap gap-4 mb-6 justify-center">
+      
+      <!-- Markdown Split Button -->
+      <div class="inline-flex rounded-md shadow-sm" role="group">
+        <button onclick="copyMarkdown();renderToHTML()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-l-md border-r border-blue-500 flex items-center gap-2">
+          <i class="fas fa-code"></i> Copy Markdown
+        </button>
+        <button onclick="downloadMarkdown()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download Markdown">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+
+      <!-- Excel Split Button -->
+      <div class="inline-flex rounded-md shadow-sm" role="group">
+        <button onclick="copyExcel();renderToHTML()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-l-md border-r border-green-500 flex items-center gap-2">
+          <i class="fas fa-table-cells"></i> Copy Excel
+        </button>
+        <button onclick="downloadExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download Excel (TSV)">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+
+      <!-- HTML Split Button -->
+      <div class="inline-flex rounded-md shadow-sm" role="group">
+        <button onclick="copyHTML();renderToHTML()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-l-md border-r border-yellow-500 flex items-center gap-2">
+          <i class="fas fa-code"></i> Copy HTML
+        </button>
+        <button onclick="downloadHTML()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download HTML">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+
+      <!-- CSV Split Button -->
+      <div class="inline-flex rounded-md shadow-sm" role="group">
+        <button onclick="copyCSV();renderToHTML()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-l-md border-r border-orange-500 flex items-center gap-2">
+          <i class="fas fa-file-csv"></i> Copy CSV
+        </button>
+        <button onclick="downloadCSV()" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download CSV">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+
+      <!-- JSON Split Button -->
+      <div class="inline-flex rounded-md shadow-sm" role="group">
+        <button onclick="copyJSON();renderToHTML()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-l-md border-r border-gray-700 flex items-center gap-2">
+          <i class="fas fa-code-branch"></i> Copy JSON
+        </button>
+        <button onclick="downloadJSON()" class="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded-r-md flex items-center" title="Download JSON">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+
+      <!-- Preview Button (Single) -->
+      <button onclick="renderToHTML()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
         <i class="fas fa-eye"></i> Preview
       </button>
     </div>

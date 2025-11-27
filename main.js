@@ -1,3 +1,4 @@
+// --- Toast Notification ---
 function showToast(message, type = 'success') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
@@ -13,24 +14,22 @@ function showToast(message, type = 'success') {
   }, 2000);
 }
 
+// --- Parsing Logic ---
 function parseInput() {
   const input = document.getElementById('inputArea').value.trim();
 
-  // Try JSON first
+  // Try JSON
   if (input.startsWith('[') || input.startsWith('{')) {
     try {
       const data = JSON.parse(input);
       if (Array.isArray(data) && data.length > 0) {
         if (typeof data[0] === 'object' && data[0] !== null) {
-          // Array of objects - convert to table
           const keys = Object.keys(data[0]);
           const rows = [keys, ...data.map(obj => keys.map(key => obj[key] || ''))];
           return { type: 'json', rows };
         }
       }
-    } catch (e) {
-      // Not valid JSON, continue with other parsers
-    }
+    } catch (e) { /* ignore */ }
   }
 
   // Check for HTML table
@@ -40,9 +39,7 @@ function parseInput() {
     const rows = Array.from(container.querySelectorAll('tr')).map(tr =>
       Array.from(tr.querySelectorAll('th, td')).map(cell => cell.textContent.trim())
     );
-    if (rows.length > 0) {
-      return { type: 'html', rows };
-    }
+    if (rows.length > 0) return { type: 'html', rows };
   }
 
   // Check for tab-separated (Excel paste)
@@ -58,17 +55,15 @@ function parseInput() {
       let rows = lines.map(line =>
         line.trim().replace(/^(\||\s*)|(\|\s*)$/g, '').split('|').map(cell => cell.trim())
       );
-      // Updated regex to match separator rows with colons (like :--- or ---:)
+      // Remove Markdown separator lines (e.g. ---)
       rows = rows.filter(row => !row.every(cell => /^:?-+:?$/.test(cell)));
       return { type: 'markdown', rows };
     }
   }
 
-  // Auto-detect CSV with different separators
+  // Auto-detect CSV
   const csvResult = parseCSV(input);
-  if (csvResult.rows.length > 0) {
-    return csvResult;
-  }
+  if (csvResult.rows.length > 0) return csvResult;
 
   return { type: 'unknown', rows: [] };
 }
@@ -77,7 +72,6 @@ function parseCSV(input) {
   const lines = input.split('\n').filter(line => line.trim());
   if (lines.length === 0) return { type: 'unknown', rows: [] };
 
-  // Test different separators
   const separators = [',', ';', '|', '\t'];
   let bestSeparator = ',';
   let maxColumns = 0;
@@ -90,9 +84,7 @@ function parseCSV(input) {
     }
   }
 
-  // Parse with the best separator
   const rows = lines.map(line => {
-    // Simple CSV parsing - handles quoted fields
     const result = [];
     let current = '';
     let inQuotes = false;
@@ -100,19 +92,15 @@ function parseCSV(input) {
 
     while (i < line.length) {
       const char = line[i];
-      
       if (char === '"') {
         if (inQuotes && line[i + 1] === '"') {
-          // Escaped quote
           current += '"';
           i += 2;
         } else {
-          // Toggle quote state
           inQuotes = !inQuotes;
           i++;
         }
       } else if (char === bestSeparator && !inQuotes) {
-        // Field separator
         result.push(current.trim());
         current = '';
         i++;
@@ -121,73 +109,52 @@ function parseCSV(input) {
         i++;
       }
     }
-    
     result.push(current.trim());
-    return result.map(cell => cell.replace(/^"(.*)"$/, '$1')); // Remove outer quotes
+    return result.map(cell => cell.replace(/^"(.*)"$/, '$1'));
   });
 
-  // Validate that we have consistent columns
   const columnCounts = rows.map(row => row.length);
   const avgColumns = columnCounts.reduce((a, b) => a + b, 0) / columnCounts.length;
   
   if (avgColumns >= 2 && rows.length > 0) {
     return { type: 'csv', rows, separator: bestSeparator };
   }
-
   return { type: 'unknown', rows: [] };
 }
 
-function copyMarkdown() {
-  const { rows } = parseInput();
-  if (!rows.length) return showToast('❌ No table to convert.', 'error');
+// --- Content Generation Functions (Pure Logic) ---
 
+function generateMarkdown() {
+  const { rows } = parseInput();
+  if (!rows.length) return null;
   const header = rows[0];
   const separator = header.map(() => '---');
-  const markdown = [header, separator, ...rows.slice(1)]
+  return [header, separator, ...rows.slice(1)]
     .map(row => '| ' + row.join(' | ') + ' |')
     .join('\n');
-
-  navigator.clipboard.writeText(markdown)
-    .then(() => showToast('✅ Markdown copied to clipboard!'))
-    .catch(err => showToast('❌ Failed to copy: ' + err, 'error'));
 }
 
-function copyExcel() {
+function generateExcel() {
   const { rows } = parseInput();
-  if (!rows.length) return showToast('❌ No table to convert.', 'error');
-
-  const tsv = rows.map(row => row.join('\t')).join('\n');
-
-  navigator.clipboard.writeText(tsv)
-    .then(() => showToast('✅ Excel-compatible data copied!'))
-    .catch(err => showToast('❌ Failed to copy: ' + err, 'error'));
+  if (!rows.length) return null;
+  return rows.map(row => row.join('\t')).join('\n');
 }
 
-function copyHTML() {
+function generateHTML() {
   const { rows } = parseInput();
-  if (!rows.length) return showToast('❌ No table to convert.', 'error');
-
-  const html = generateTableHTML(rows);
-  navigator.clipboard.writeText(html)
-    .then(() => showToast('✅ HTML table copied to clipboard!'))
-    .catch(err => showToast('❌ Failed to copy: ' + err, 'error'));
+  if (!rows.length) return null;
+  return generateTableHTML(rows); // Reusing the helper
 }
 
-function copyCSV() {
+function generateCSV() {
   const { rows } = parseInput();
-  if (!rows.length) return showToast('❌ No table to convert.', 'error');
-
-  const csv = rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
-
-  navigator.clipboard.writeText(csv)
-    .then(() => showToast('✅ CSV copied to clipboard!'))
-    .catch(err => showToast('❌ Failed to copy: ' + err, 'error'));
+  if (!rows.length) return null;
+  return rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
 }
 
-function copyJSON() {
+function generateJSON() {
   const { rows } = parseInput();
-  if (!rows.length || rows.length < 2) return showToast('❌ Need header + data for JSON.', 'error');
-
+  if (!rows.length || rows.length < 2) return null;
   const header = rows[0];
   const data = rows.slice(1).map(row => {
     const obj = {};
@@ -196,11 +163,99 @@ function copyJSON() {
     });
     return obj;
   });
-
-  navigator.clipboard.writeText(JSON.stringify(data, null, 2))
-    .then(() => showToast('✅ JSON copied to clipboard!'))
-    .catch(err => showToast('❌ Failed to copy: ' + err, 'error'));
+  return JSON.stringify(data, null, 2);
 }
+
+// --- Copy & Download Actions ---
+
+// Helper for download
+function downloadContent(content, filename, mimeType) {
+  if (!content) return showToast('❌ No valid data to download.', 'error');
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`✅ Downloaded ${filename}`);
+}
+
+// Markdown
+function copyMarkdown() {
+  const content = generateMarkdown();
+  if (!content) return showToast('❌ No table to convert.', 'error');
+  navigator.clipboard.writeText(content)
+    .then(() => showToast('✅ Markdown copied!'))
+    .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+function downloadMarkdown() {
+  const content = generateMarkdown();
+  downloadContent(content, 'table.md', 'text/markdown');
+}
+
+// Excel
+function copyExcel() {
+  const content = generateExcel();
+  if (!content) return showToast('❌ No table to convert.', 'error');
+  navigator.clipboard.writeText(content)
+    .then(() => showToast('✅ Excel (TSV) copied!'))
+    .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+function downloadExcel() {
+  const content = generateExcel();
+  // Downloading as .tsv so Excel opens it correctly without warnings, 
+  // or .txt. TSV is safest for "copy paste compatible" downloads.
+  downloadContent(content, 'table.tsv', 'text/tab-separated-values');
+}
+
+// HTML
+function copyHTML() {
+  const content = generateHTML();
+  if (!content) return showToast('❌ No table to convert.', 'error');
+  navigator.clipboard.writeText(content)
+    .then(() => showToast('✅ HTML copied!'))
+    .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+function downloadHTML() {
+  const content = generateHTML();
+  downloadContent(content, 'table.html', 'text/html');
+}
+
+// CSV
+function copyCSV() {
+  const content = generateCSV();
+  if (!content) return showToast('❌ No table to convert.', 'error');
+  navigator.clipboard.writeText(content)
+    .then(() => showToast('✅ CSV copied!'))
+    .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+function downloadCSV() {
+  const content = generateCSV();
+  downloadContent(content, 'table.csv', 'text/csv');
+}
+
+// JSON
+function copyJSON() {
+  const content = generateJSON();
+  if (!content) return showToast('❌ Header + Data required.', 'error');
+  navigator.clipboard.writeText(content)
+    .then(() => showToast('✅ JSON copied!'))
+    .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+function downloadJSON() {
+  const content = generateJSON();
+  downloadContent(content, 'table.json', 'application/json');
+}
+
+// --- Preview / Helper ---
 
 function renderToHTML() {
   const { type, rows, separator } = parseInput();
@@ -229,6 +284,8 @@ function generateTableHTML(rows) {
   return `<table class="table-auto border-collapse w-full text-sm">${thead}${tbody}</table>`;
 }
 
+// --- UI / Upload Logic ---
+
 function toggleDarkMode() {
   const html = document.documentElement;
   const isDark = html.classList.toggle('dark');
@@ -247,69 +304,36 @@ function setupFileUpload() {
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
 
-  // Trigger file input click when clicking on the drop zone
-  dropZone.addEventListener('click', () => {
-    fileInput.click();
-  });
+  dropZone.addEventListener('click', () => fileInput.click());
 
-  // Handle file selection from dialog
   fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length) {
-      handleFile(e.target.files[0]);
-    }
+    if (e.target.files.length) handleFile(e.target.files[0]);
   });
 
-  // Drag and drop events
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    dropZone.addEventListener(eventName, preventDefaults, false);
-  });
-
-  function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  // Highlight drop zone on drag over
-  ['dragenter', 'dragover'].forEach(eventName => {
-    dropZone.addEventListener(eventName, () => {
-      dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault(); e.stopPropagation();
     }, false);
   });
 
-  // Remove highlight on drag leave or drop
-  ['dragleave', 'drop'].forEach(eventName => {
-    dropZone.addEventListener(eventName, () => {
-      dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
-    }, false);
-  });
+  ['dragenter', 'dragover'].forEach(ev => dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700'));
+  ['dragleave', 'drop'].forEach(ev => dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700'));
 
-  // Handle dropped file
   dropZone.addEventListener('drop', (e) => {
-    const dt = e.dataTransfer;
-    const files = dt.files;
-    if (files.length) {
-      handleFile(files[0]);
-    }
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
   });
 
   function handleFile(file) {
     const isExcel = file.name.match(/\.(xlsx|xls)$/i);
-
     if (isExcel) {
-      // Handle Binary Excel File
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
-          
-          // Get first sheet
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          
-          // Convert to CSV
           const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
-          
           document.getElementById('inputArea').value = csvOutput;
           showToast(`✅ Loaded Excel file: ${file.name}`);
           renderToHTML();
@@ -320,7 +344,6 @@ function setupFileUpload() {
       };
       reader.readAsArrayBuffer(file);
     } else {
-      // Handle Text File (CSV, JSON, MD, HTML)
       const reader = new FileReader();
       reader.onload = (e) => {
         document.getElementById('inputArea').value = e.target.result;
@@ -336,15 +359,9 @@ function setupFileUpload() {
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('theme');
   const html = document.documentElement;
-
-  if (saved === 'dark') {
-    html.classList.add('dark');
-  } else if (saved === 'light') {
-    html.classList.remove('dark');
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    html.classList.add('dark');
-  }
-
+  if (saved === 'dark') html.classList.add('dark');
+  else if (saved === 'light') html.classList.remove('dark');
+  else if (window.matchMedia('(prefers-color-scheme: dark)').matches) html.classList.add('dark');
   updateThemeIcon();
-  setupFileUpload(); // Initialize Drag & Drop
+  setupFileUpload();
 });
