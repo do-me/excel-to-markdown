@@ -15,7 +15,157 @@ function showToast(message, type = 'success') {
 }
 
 // --- Parsing Logic ---
+
+// --- Cell Cleanup Rules (see GitHub issue #1) ---
+// Built-in rules for ** and <br>, plus arbitrary custom find→replace rules.
+// All state (panel visibility, toggles, values, custom rules) persists in localStorage.
+
+const CLEANUP_KEY = 'cleanupConfig';
+let cleanupState = {
+  visible: false,
+  bold: { on: false, repl: '' },
+  br: { on: false, repl: '' },
+  custom: [] // { on, find, repl }
+};
+
+function loadCleanupState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CLEANUP_KEY));
+    if (saved && typeof saved === 'object') {
+      cleanupState = {
+        visible: !!saved.visible,
+        bold: { on: !!saved.bold?.on, repl: saved.bold?.repl ?? '' },
+        br: { on: !!saved.br?.on, repl: saved.br?.repl ?? '' },
+        custom: Array.isArray(saved.custom)
+          ? saved.custom.map(r => ({ on: !!r.on, find: r.find ?? '', repl: r.repl ?? '' }))
+          : []
+      };
+    }
+  } catch (e) { /* corrupted storage -> defaults */ }
+}
+
+function saveCleanupState() {
+  localStorage.setItem(CLEANUP_KEY, JSON.stringify(cleanupState));
+}
+
+function cleanCell(cell) {
+  let result = String(cell);
+  if (cleanupState.bold.on) {
+    result = result.split('**').join(cleanupState.bold.repl);
+  }
+  if (cleanupState.br.on) {
+    result = result.replace(/<\s*\/?\s*br\s*\/?\s*>/gi, cleanupState.br.repl);
+  }
+  for (const rule of cleanupState.custom) {
+    if (rule.on && rule.find) {
+      result = result.split(rule.find).join(rule.repl);
+    }
+  }
+  return result.trim();
+}
+
+// Re-render the preview silently (no toast) if one is already showing
+function refreshPreview() {
+  const output = document.getElementById('outputArea');
+  if (!output || !output.innerHTML.trim()) return;
+  const { rows } = parseInput();
+  output.innerHTML = rows.length
+    ? generateTableHTML(rows)
+    : '<p class="text-red-500">❌ Could not detect table format.</p>';
+}
+
+function toggleCleanup() {
+  cleanupState.visible = !cleanupState.visible;
+  saveCleanupState();
+  renderCleanupUI();
+}
+
+function updateBuiltinRule(key, field, value) {
+  cleanupState[key][field] = value;
+  saveCleanupState();
+  refreshPreview();
+}
+
+function addCustomRule() {
+  cleanupState.custom.push({ on: true, find: '', repl: '' });
+  saveCleanupState();
+  renderCustomRules();
+}
+
+function updateCustomRule(i, field, value) {
+  cleanupState.custom[i][field] = value;
+  saveCleanupState();
+  refreshPreview();
+}
+
+function deleteCustomRule(i) {
+  cleanupState.custom.splice(i, 1);
+  saveCleanupState();
+  renderCustomRules();
+  refreshPreview();
+}
+
+function renderCleanupUI() {
+  document.getElementById('cleanupPanel').classList.toggle('hidden', !cleanupState.visible);
+  document.getElementById('cleanupChevron').className =
+    'fas text-xs ' + (cleanupState.visible ? 'fa-chevron-up' : 'fa-chevron-down');
+  document.getElementById('replaceBold').checked = cleanupState.bold.on;
+  document.getElementById('replaceBoldChar').value = cleanupState.bold.repl;
+  document.getElementById('replaceBr').checked = cleanupState.br.on;
+  document.getElementById('replaceBrChar').value = cleanupState.br.repl;
+  renderCustomRules();
+}
+
+function renderCustomRules() {
+  const container = document.getElementById('customRules');
+  container.innerHTML = '';
+  const inputClass = 'flex-1 min-w-0 px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 font-mono text-xs';
+
+  cleanupState.custom.forEach((rule, i) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'accent-blue-600';
+    cb.checked = rule.on;
+    cb.addEventListener('change', () => updateCustomRule(i, 'on', cb.checked));
+
+    const find = document.createElement('input');
+    find.type = 'text';
+    find.className = inputClass;
+    find.placeholder = 'find';
+    find.value = rule.find;
+    find.addEventListener('input', () => updateCustomRule(i, 'find', find.value));
+
+    const arrow = document.createElement('span');
+    arrow.className = 'text-gray-400';
+    arrow.textContent = '→';
+
+    const repl = document.createElement('input');
+    repl.type = 'text';
+    repl.className = inputClass;
+    repl.placeholder = '(nothing)';
+    repl.value = rule.repl;
+    repl.addEventListener('input', () => updateCustomRule(i, 'repl', repl.value));
+
+    const del = document.createElement('button');
+    del.className = 'text-red-500 hover:text-red-700 px-1';
+    del.title = 'Delete rule';
+    del.innerHTML = '<i class="fas fa-trash-alt"></i>';
+    del.addEventListener('click', () => deleteCustomRule(i));
+
+    row.append(cb, find, arrow, repl, del);
+    container.appendChild(row);
+  });
+}
+
 function parseInput() {
+  const parsed = parseInputRaw();
+  return { ...parsed, rows: parsed.rows.map(row => row.map(cleanCell)) };
+}
+
+function parseInputRaw() {
   const input = document.getElementById('inputArea').value.trim();
 
   // Try JSON
@@ -461,4 +611,6 @@ window.addEventListener('DOMContentLoaded', () => {
   else if (window.matchMedia('(prefers-color-scheme: dark)').matches) html.classList.add('dark');
   updateThemeIcon();
   setupFileUpload();
+  loadCleanupState();
+  renderCleanupUI();
 });

@@ -44,6 +44,34 @@
     <textarea id="inputArea" placeholder="...or paste Excel cells, Markdown table, or HTML table code here manually."
       class="w-full p-4 border border-gray-300 dark:border-gray-700 rounded-b-lg rounded-tr-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 h-56 resize-y text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 relative z-0"></textarea>
 
+    <!-- Cell Cleanup (hideable, state persisted in localStorage) -->
+    <div class="mb-4">
+      <div class="flex justify-center">
+        <button onclick="toggleCleanup()" class="text-sm text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2">
+          <i class="fas fa-broom"></i> Cell cleanup rules
+          <i id="cleanupChevron" class="fas fa-chevron-down text-xs"></i>
+        </button>
+      </div>
+      <div id="cleanupPanel" class="hidden mt-3 max-w-2xl mx-auto border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm text-sm space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="replaceBold" class="accent-blue-600" onchange="updateBuiltinRule('bold','on',this.checked)" />
+          <span class="w-36 shrink-0">Replace <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">**</code> with</span>
+          <input type="text" id="replaceBoldChar" placeholder="(nothing)" oninput="updateBuiltinRule('bold','repl',this.value)"
+            class="flex-1 min-w-0 px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 font-mono text-xs" />
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="replaceBr" class="accent-blue-600" onchange="updateBuiltinRule('br','on',this.checked)" />
+          <span class="w-36 shrink-0">Replace <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">&lt;br&gt;</code> with</span>
+          <input type="text" id="replaceBrChar" placeholder="(nothing)" oninput="updateBuiltinRule('br','repl',this.value)"
+            class="flex-1 min-w-0 px-2 py-0.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 font-mono text-xs" />
+        </label>
+        <div id="customRules" class="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700"></div>
+        <button onclick="addCustomRule()" class="text-blue-600 dark:text-blue-400 hover:underline text-sm flex items-center gap-1">
+          <i class="fas fa-plus"></i> Add custom rule
+        </button>
+      </div>
+    </div>
+
     <!-- Action Buttons Row -->
     <div class="flex flex-wrap gap-4 mb-6 justify-center">
       
