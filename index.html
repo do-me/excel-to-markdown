@@ -29,7 +29,7 @@
       </button>
     </div>
 
-    <p class="text-lg mb-4 text-center">Paste a table in Excel, Markdown, HTML, CSV or JSON format. Automatically detects the input format and lets you copy to any format like Markdown, Excel, CSV, JSON or HTML! Source code on <a href="https://github.com/do-me/excel-to-markdown" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a></p>
+    <p class="text-lg mb-4 text-center">Paste a table in Excel, Markdown, HTML, CSV, JSON or text (claude-code) format. Automatically detects the input format and lets you copy to any format like Markdown, Excel, CSV, JSON or HTML! Source code on <a href="https://github.com/do-me/excel-to-markdown" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a></p>
 
     <!-- Compact Drop Zone / File Picker -->
     <div id="dropZone" class="w-full py-2 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-t-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer flex flex-row items-center justify-center gap-3 text-gray-500 dark:text-gray-400 group relative -mb-1 z-10">
@@ -93,6 +93,26 @@
           <i class="fas fa-code-branch"></i> Copy JSON
         </button>
         <button onclick="downloadJSON()" class="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded-r-md flex items-center" title="Download JSON">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+
+      <!-- Unicode (Box Table) Split Button -->
+      <div class="inline-flex rounded-md shadow-sm" role="group">
+        <button onclick="copyBox();renderToHTML()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-l-md border-r border-teal-500 flex items-center gap-2">
+          <i class="fas fa-terminal"></i> Copy Unicode
+        </button>
+        <button onclick="downloadBox()" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download Unicode (box-drawing table)">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+
+      <!-- ASCII Table Split Button -->
+      <div class="inline-flex rounded-md shadow-sm" role="group">
+        <button onclick="copyAscii();renderToHTML()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-l-md border-r border-cyan-500 flex items-center gap-2">
+          <i class="fas fa-grip-lines"></i> Copy ASCII
+        </button>
+        <button onclick="downloadAscii()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download ASCII table">
           <i class="fas fa-download"></i>
         </button>
       </div>

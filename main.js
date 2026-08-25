@@ -32,6 +32,28 @@ function parseInput() {
     } catch (e) { /* ignore */ }
   }
 
+  // Check for box-drawing table (e.g. claude-code / CLI-style output)
+  if (input.includes('│')) {
+    const rows = input.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.includes('│') && !/^[┌┬┐├┼┤└┴┘─╭╮╰╯]+$/.test(line.replace(/│/g, '')))
+      .map(line =>
+        line.replace(/^│/, '').replace(/│$/, '').split('│').map(cell => cell.trim())
+      );
+    if (rows.length > 0) return { type: 'box', rows };
+  }
+
+  // Check for ASCII table (+---+ borders with | cells, e.g. MySQL CLI output)
+  if (/^\+[-+]+\+$/m.test(input.split('\n').map(l => l.trim()).find(l => l.startsWith('+')) || '')) {
+    const rows = input.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.startsWith('|') && line.endsWith('|'))
+      .map(line =>
+        line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim())
+      );
+    if (rows.length > 0) return { type: 'ascii', rows };
+  }
+
   // Check for HTML table
   if (input.includes('<table') || input.includes('<tr') || input.includes('<td') || input.includes('<th')) {
     const container = document.createElement('div');
@@ -166,6 +188,53 @@ function generateJSON() {
   return JSON.stringify(data, null, 2);
 }
 
+const BOX_CHARS = {
+  unicode: { tl: '┌', tm: '┬', tr: '┐', ml: '├', mm: '┼', mr: '┤', bl: '└', bm: '┴', br: '┘', h: '─', v: '│' },
+  ascii:   { tl: '+', tm: '+', tr: '+', ml: '+', mm: '+', mr: '+', bl: '+', bm: '+', br: '+', h: '-', v: '|' }
+};
+
+function generateBoxTable(charset) {
+  const { rows } = parseInput();
+  if (!rows.length) return null;
+  const ch = BOX_CHARS[charset];
+  const numCols = Math.max(...rows.map(r => r.length));
+  const norm = rows.map(r => Array.from({ length: numCols }, (_, i) => String(r[i] ?? '')));
+  // Use code-point length so multi-byte chars (e.g. ↔) count as one
+  const len = s => [...s].length;
+  const widths = Array.from({ length: numCols }, (_, i) => Math.max(...norm.map(r => len(r[i]))));
+
+  const border = (l, m, r) => l + widths.map(w => ch.h.repeat(w + 2)).join(m) + r;
+  const isNumeric = c => /\d/.test(c) && /^-?[\d.,\s]+%?$/.test(c.trim());
+  const pad = (cell, w, align) => {
+    const space = w - len(cell);
+    if (align === 'center') {
+      const left = Math.floor(space / 2);
+      return ' '.repeat(left) + cell + ' '.repeat(space - left);
+    }
+    return align === 'right' ? ' '.repeat(space) + cell : cell + ' '.repeat(space);
+  };
+  const rowLine = (r, isHeader) =>
+    ch.v + r.map((c, i) =>
+      ' ' + pad(c, widths[i], isHeader ? 'center' : (isNumeric(c) ? 'right' : 'left')) + ' '
+    ).join(ch.v) + ch.v;
+
+  const out = [border(ch.tl, ch.tm, ch.tr), rowLine(norm[0], true)];
+  for (let i = 1; i < norm.length; i++) {
+    out.push(border(ch.ml, ch.mm, ch.mr));
+    out.push(rowLine(norm[i], false));
+  }
+  out.push(border(ch.bl, ch.bm, ch.br));
+  return out.join('\n');
+}
+
+function generateBox() {
+  return generateBoxTable('unicode');
+}
+
+function generateAscii() {
+  return generateBoxTable('ascii');
+}
+
 // --- Copy & Download Actions ---
 
 // Helper for download
@@ -253,6 +322,34 @@ function copyJSON() {
 function downloadJSON() {
   const content = generateJSON();
   downloadContent(content, 'table.json', 'application/json');
+}
+
+// Unicode box-drawing table
+function copyBox() {
+  const content = generateBox();
+  if (!content) return showToast('❌ No table to convert.', 'error');
+  navigator.clipboard.writeText(content)
+    .then(() => showToast('✅ Unicode table copied!'))
+    .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+function downloadBox() {
+  const content = generateBox();
+  downloadContent(content, 'table.txt', 'text/plain');
+}
+
+// ASCII table
+function copyAscii() {
+  const content = generateAscii();
+  if (!content) return showToast('❌ No table to convert.', 'error');
+  navigator.clipboard.writeText(content)
+    .then(() => showToast('✅ ASCII table copied!'))
+    .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+function downloadAscii() {
+  const content = generateAscii();
+  downloadContent(content, 'table-ascii.txt', 'text/plain');
 }
 
 // --- Preview / Helper ---
