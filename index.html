@@ -2,7 +2,7 @@
 <html lang="en" class="">
 <head>
   <meta charset="UTF-8" />
-  <title>Multi Table Converter</title>
+  <title>Multi Table Converter: Excel, Markdown, HTML, CSV, JSON, Parquet, Unicode & ASCII</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SheetJS for Excel Parsing -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -23,25 +23,25 @@
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen p-6 font-sans relative">
   <div class="w-full max-w-8xl mx-auto">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-4xl font-bold text-center flex-1">Multi Table Converter: Excel, Markdown, HTML, CSV, JSON</h1>
+      <h1 class="text-4xl font-bold text-center flex-1">Multi Table Converter: Excel, Markdown, HTML, CSV, JSON, Parquet, Unicode & ASCII</h1>
       <button id="themeToggle" onclick="toggleDarkMode()" class="ml-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2 rounded shadow text-xl">
         <i id="themeIcon" class="fas fa-moon"></i>
       </button>
     </div>
 
-    <p class="text-lg mb-4 text-center">Paste a table in Excel, Markdown, HTML, CSV, JSON or text (claude-code) format. Automatically detects the input format and lets you copy to any format like Markdown, Excel, CSV, JSON or HTML! Source code on <a href="https://github.com/do-me/excel-to-markdown" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a></p>
+    <p class="text-lg mb-4 text-center">Paste or upload a table in Excel, Parquet, Markdown, HTML, CSV, JSON, Unicode box-drawing or ASCII (claude-code / MySQL CLI) format. Automatically detects the input format and lets you copy or download any format like Markdown, Excel, CSV, JSON, HTML, Parquet, Unicode or ASCII tables! Source code on <a href="https://github.com/do-me/excel-to-markdown" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a></p>
 
     <!-- Compact Drop Zone / File Picker -->
     <div id="dropZone" class="w-full py-2 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-t-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer flex flex-row items-center justify-center gap-3 text-gray-500 dark:text-gray-400 group relative -mb-1 z-10">
-      <input type="file" id="fileInput" class="hidden" accept=".csv,.json,.txt,.md,.html,.htm,.tsv,.xlsx,.xls" />
+      <input type="file" id="fileInput" class="hidden" accept=".csv,.json,.txt,.md,.html,.htm,.tsv,.xlsx,.xls,.parquet" />
       <i class="fas fa-cloud-upload-alt text-xl group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"></i>
       <div class="text-sm">
         <span class="font-medium group-hover:text-gray-700 dark:group-hover:text-gray-200">Click to upload or drag file here</span>
-        <span class="text-xs opacity-70 ml-1 hidden sm:inline">(Excel, CSV, JSON, MD, HTML)</span>
+        <span class="text-xs opacity-70 ml-1 hidden sm:inline">(Excel, Parquet, CSV, JSON, MD, HTML, TXT with Unicode/ASCII tables)</span>
       </div>
     </div>
 
-    <textarea id="inputArea" placeholder="...or paste Excel cells, Markdown table, or HTML table code here manually."
+    <textarea id="inputArea" placeholder="...or paste Excel cells, a Markdown, HTML, CSV, JSON, Unicode box-drawing or ASCII table here manually."
       class="w-full p-4 border border-gray-300 dark:border-gray-700 rounded-b-lg rounded-tr-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 h-56 resize-y text-sm font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 relative z-0"></textarea>
 
     <!-- Cell Cleanup (hideable, state persisted in localStorage) -->
@@ -90,7 +90,7 @@
         <button onclick="copyExcel();renderToHTML()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-l-md border-r border-green-500 flex items-center gap-2">
           <i class="fas fa-table-cells"></i> Copy Excel
         </button>
-        <button onclick="downloadExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download Excel (TSV)">
+        <button onclick="downloadExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-r-md flex items-center" title="Download Excel (.xlsx)">
           <i class="fas fa-download"></i>
         </button>
       </div>
@@ -144,6 +144,11 @@
           <i class="fas fa-download"></i>
         </button>
       </div>
+
+      <!-- Parquet Download Button (Single — binary format, no copy) -->
+      <button onclick="downloadParquet()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow flex items-center gap-2" title="Download Parquet (.parquet)">
+        <i class="fas fa-download"></i> Parquet
+      </button>
 
       <!-- Preview Button (Single) -->
       <button onclick="renderToHTML()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">

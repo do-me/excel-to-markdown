@@ -426,10 +426,13 @@ function copyExcel() {
 }
 
 function downloadExcel() {
-  const content = generateExcel();
-  // Downloading as .tsv so Excel opens it correctly without warnings, 
-  // or .txt. TSV is safest for "copy paste compatible" downloads.
-  downloadContent(content, 'table.tsv', 'text/tab-separated-values');
+  const { rows } = parseInput();
+  if (!rows.length) return showToast('❌ No valid data to download.', 'error');
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Table');
+  XLSX.writeFile(workbook, 'table.xlsx');
+  showToast('✅ Downloaded table.xlsx');
 }
 
 // HTML
@@ -495,6 +498,56 @@ function copyAscii() {
   navigator.clipboard.writeText(content)
     .then(() => showToast('✅ ASCII table copied!'))
     .catch(err => showToast('❌ Failed: ' + err, 'error'));
+}
+
+// Parquet (hyparquet / hyparquet-writer, lazy-loaded from CDN on first use)
+let parquetModulesPromise = null;
+function loadParquetModules() {
+  if (!parquetModulesPromise) {
+    parquetModulesPromise = Promise.all([
+      import('https://cdn.jsdelivr.net/npm/hyparquet@1/+esm'),
+      import('https://cdn.jsdelivr.net/npm/hyparquet-writer@0.16/+esm'),
+      // Optional: adds gzip/brotli/zstd etc. support on top of the built-in snappy
+      import('https://cdn.jsdelivr.net/npm/hyparquet-compressors@1/+esm').catch(() => null)
+    ]).then(([hyparquet, writer, compressorsMod]) => ({
+      hyparquet,
+      writer,
+      compressors: compressorsMod ? compressorsMod.compressors : undefined
+    }));
+    parquetModulesPromise.catch(() => { parquetModulesPromise = null; });
+  }
+  return parquetModulesPromise;
+}
+
+function parquetCellToString(value) {
+  if (value === null || value === undefined) return '';
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value).replace(/\r?\n/g, ' ');
+}
+
+async function downloadParquet() {
+  const { rows } = parseInput();
+  if (!rows.length || rows.length < 2) return showToast('❌ No valid data to download.', 'error');
+  try {
+    const { writer } = await loadParquetModules();
+    const header = rows[0];
+    const body = rows.slice(1);
+    const columnData = header.map((name, i) => {
+      const values = body.map(row => (row[i] ?? '').toString());
+      const nonEmpty = values.filter(v => v.trim() !== '');
+      const isNumeric = nonEmpty.length > 0 && nonEmpty.every(v => !isNaN(Number(v)));
+      if (isNumeric) {
+        return { name, data: values.map(v => v.trim() === '' ? null : Number(v)), type: 'DOUBLE' };
+      }
+      return { name, data: values, type: 'STRING' };
+    });
+    const buffer = writer.parquetWriteBuffer({ columnData });
+    downloadContent(buffer, 'table.parquet', 'application/vnd.apache.parquet');
+  } catch (err) {
+    console.error(err);
+    showToast('❌ Error generating Parquet file', 'error');
+  }
 }
 
 function downloadAscii() {
@@ -572,7 +625,29 @@ function setupFileUpload() {
 
   function handleFile(file) {
     const isExcel = file.name.match(/\.(xlsx|xls)$/i);
-    if (isExcel) {
+    const isParquet = file.name.match(/\.parquet$/i);
+    if (isParquet) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const { hyparquet, compressors } = await loadParquetModules();
+          const data = await hyparquet.parquetReadObjects({ file: e.target.result, compressors });
+          if (!data.length) return showToast('❌ Parquet file has no rows', 'error');
+          const header = Object.keys(data[0]);
+          const csvOutput = [header, ...data.map(row => header.map(k => parquetCellToString(row[k])))]
+            .map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+          document.getElementById('inputArea').value = csvOutput;
+          showToast(`✅ Loaded Parquet file: ${file.name}`);
+          renderToHTML();
+        } catch (err) {
+          console.error(err);
+          showToast('❌ Error parsing Parquet file', 'error');
+        }
+      };
+      reader.onerror = () => showToast('❌ Error reading file', 'error');
+      reader.readAsArrayBuffer(file);
+    } else if (isExcel) {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
